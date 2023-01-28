@@ -74,9 +74,63 @@ unsigned sram_read(uint16_t addr)
 	return bit;
 }
 
+uint16_t lfsr_update(uint16_t lfsr)
+{
+	unsigned lsb = lfsr & 1u;
+	lfsr >>= 1;
+	if (lsb)
+		lfsr ^= 0xB400u;
+
+	return lfsr;
+}
+
+void memtest(int reps, uint16_t seed)
+{
+	for(int i = 1 ; i <= reps ; i++)
+	{
+		unsigned fail = 0;
+
+		uint16_t lfsr = i + seed;
+		for(int a = 0 ; a < 1023 ; a++)
+		{
+			lfsr = lfsr_update(lfsr);
+
+			uint16_t addr = a; //(lfsr >> 1) & 0x3FF;
+			unsigned bit = lfsr & 1;
+
+			sram_write(addr, bit);
+		}
+
+		lfsr = i + seed;
+		for(int a = 0 ; a < 1023 ; a++)
+		{
+			lfsr = lfsr_update(lfsr);
+
+			uint16_t addr = a; //(lfsr >> 1) & 0x3FF;
+			unsigned expected_bit = lfsr & 1;
+
+			unsigned bit = sram_read(addr);
+			if (bit != expected_bit)
+			{
+				Serial.print(addr | 0x1000, 16);
+				Serial.print("=");
+				Serial.print(bit);
+				Serial.println(expected_bit);
+				fail++;
+			}
+		}
+
+		Serial.print(i);
+		Serial.print("=");
+		Serial.println(fail);
+	}
+}
+
 void loop(void)
 {
 	Serial.println("writing tests");
+
+	memtest(100, micros());
 
 	// write test patterns to the chip and read it back
 	for(uint16_t i = 0 ; i < 1024 ; i++)
@@ -92,5 +146,5 @@ void loop(void)
 		Serial.println(bit);
 	}
 
-	delay(1000);
+	delay(10000);
 }
