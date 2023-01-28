@@ -130,21 +130,29 @@ void loop(void)
 {
 	Serial.println("writing tests");
 
-	memtest(100, micros());
+	//memtest(100, micros());
 
-	// write test patterns to the chip and read it back
+	// write all ones patterns to the chip and read it back
+	// until it fails
 	for(uint16_t i = 0 ; i < 1024 ; i++)
-		sram_write(i, 0);
+		sram_write(i, i & 1);
 
+	for(int reps = 0 ; reps < 32000 ; reps++)
+	{
+	if((reps & 0xFF) == 0) {
+		Serial.print("----");
+		Serial.println(reps);
+	}
 	for(uint16_t i = 0 ; i < 1024 ; i++)
 	{
 		const unsigned bit = sram_read(i);
-		if (bit == 0)
+		if (bit == (i & 1))
 			continue;
 		Serial.print(i);
 		Serial.print("=");
 		Serial.println(bit);
 	}
+	}
 
-	delay(10000);
+	delay(1000);
 }
